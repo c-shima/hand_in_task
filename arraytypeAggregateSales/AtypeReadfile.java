@@ -23,14 +23,6 @@ final static String[] errorMes = {"","ファイルが存在しません。","フ
 static AtypeReadfile readMethod = new AtypeReadfile();
 
 
-	/*
-	 * コマンドライン引数
-	 * 「支店定義ファイルのディレクトリ 商品定義ファイルのディレクトリ (改行はしない)
-	 * 売上ファイルのディレクトリ(複数個所に入れている場合は一箇所にまとめていただく) 支店別集計ファイルの保存先
-	 * (改行はしない) 商品別集計ファイルの保存先」
-	 * を書いてください。
-	 */
-
 	private HashMap<String,allData> readData(String readfile , String identification , Integer elements){
 		HashMap<String,allData> readList = new HashMap<String,allData>();
 		File readDefine = new File(readfile);
