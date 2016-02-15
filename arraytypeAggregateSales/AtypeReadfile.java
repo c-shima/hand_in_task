@@ -16,12 +16,12 @@ import java.util.Map.Entry;
 
 
 public class AtypeReadfile {
-static String temporaryStr; static int errorMode = 0;
-final static String[] errorMes = {"","ファイルが存在しません。","ファイルのフォーマットが不正です。",
-		"ファイル名が連番になっていません。" ,"のフォーマットが不正です。","コードが不正です。",
-		"合計金額が10桁を超えました。"};
-static AtypeReadfile readMethod = new AtypeReadfile();
-
+	static String temporaryStr;
+	static int errorMode = 0;
+	final static String[] errorMes = {"ファイルが存在しません。", "ファイルのフォーマットが不正です。",
+			"ファイル名が連番になっていません。", "のフォーマットが不正です。", "コードが不正です。",
+			"合計金額が10桁を超えました。"};
+	static AtypeReadfile readMethod = new AtypeReadfile();
 
 	private HashMap<String,allData> readData(String readfile , String identification , Integer elements){
 		HashMap<String,allData> readList = new HashMap<String,allData>();
@@ -33,7 +33,7 @@ static AtypeReadfile readMethod = new AtypeReadfile();
 		try {
 			FileReader readReader = new FileReader(readDefine);
 			BufferedReader readStocker = new BufferedReader(readReader);
-			while((temporaryStr = readStocker.readLine())  != null && errorMode == 0) {
+			while((temporaryStr = readStocker.readLine())  != null) {
 				String[] contType = temporaryStr.split("\\,");
 				if (contType.length != elements || (contType[0].matches(identification)) == false ) {
 					errorMode = 2;
@@ -45,25 +45,25 @@ static AtypeReadfile readMethod = new AtypeReadfile();
 			readStocker.close();
 		} catch (IOException e) {
 			e.printStackTrace();
+		} finally {
 		}
 		return readList;
 	}
 
-	private void outputFile(String fileName , HashMap<String,allData> outputData){
-		List<Map.Entry<String,allData>> Entries = new ArrayList<Map.Entry<String,allData>>(outputData.entrySet());
-		Collections.sort(Entries, new Comparator<Map.Entry<String,allData>>() {
-			public int compare(Entry<String,allData> entry1, Entry<String,allData> entry2) {
+	private void outputFile(String fileName , HashMap<String, allData> outputData){
+		List<Map.Entry<String, allData>> Entries = new ArrayList<Map.Entry<String, allData>>(outputData.entrySet());
+		Collections.sort(Entries, new Comparator<Map.Entry<String, allData>>() {
+			public int compare(Entry<String,allData> entry1, Entry<String, allData> entry2) {
 				return ((Long)entry2.getValue().sales).compareTo((Long)entry1.getValue().sales);
-            	}
-        	});
+            }
+        });
 		File outputRank = new File(fileName);
 		try {
 			FileWriter OutputStock = new FileWriter(outputRank);
 			BufferedWriter RankOutput = new BufferedWriter(OutputStock);
 			for (Entry<String, allData> s : Entries){
-				if (s.getValue().sales != 0){
-					RankOutput.write(s.getKey()+","+outputData.get(s.getKey()).name+","+ outputData.get(s.getKey()).sales+"\r\n");
-				}
+				RankOutput.write(s.getKey() + "," + outputData.get(s.getKey()).name +
+						"," + outputData.get(s.getKey()).sales+System.getProperty("line.separator"));
 			}
 		RankOutput.close();
 		} catch (IOException e) {
@@ -73,23 +73,22 @@ static AtypeReadfile readMethod = new AtypeReadfile();
 
 
 	public static void main(String[] args){
-
 		/*
 		 * 支店定義ファイルの呼び出し
 		 */
-		HashMap<String,allData> branchList = new HashMap<String,allData>();
-		branchList = readMethod.readData(args[0]+File.separator+"branch.lst", "^[0-9]{3}$" ,2);
+		HashMap<String, allData> branchList = new HashMap<String, allData>();
+		branchList = readMethod.readData(args[0] + File.separator+"branch.lst", "^[0-9]{3}$" ,2);
 		if (errorMode > 0) {
-			System.out.println("支店定義"+errorMes[errorMode]);
+			System.out.println("支店定義" + errorMes[errorMode-1 ]);
 			return;
 		}
 		/*
 		 * 商品ファイルの呼び出し
 		 */
-		HashMap<String,allData> commodityList = new HashMap<String,allData>();
-		commodityList = readMethod.readData(args[0]+File.separator+"commodity.lst" , "^SFT[0-9]{5}$" , 2);
+		HashMap<String, allData> commodityList = new HashMap<String, allData>();
+		commodityList = readMethod.readData(args[0] + File.separator+"commodity.lst", "^SFT[0-9]{5}$" , 2);
 		if (errorMode > 0) {
-			System.out.println("商品定義"+errorMes[errorMode]);
+			System.out.println("商品定義" + errorMes[errorMode-1]);
 			return;
 		}
 		/*
@@ -104,7 +103,7 @@ static AtypeReadfile readMethod = new AtypeReadfile();
 			}
 		}
 		if (salesFilesSort.size() == 0) {
-			System.out.println("売上"+errorMes[1]);
+			System.out.println("売上"+ errorMes[0]);
 			return;
 		}
 		Collections.sort(salesFilesSort);
@@ -123,7 +122,7 @@ static AtypeReadfile readMethod = new AtypeReadfile();
 				if (nowNo == Integer.parseInt(fileSortNoCheck[0])){
 					nowNo++;
 				} else {
-					System.out.println("売上"+errorMes[3]);
+					System.out.println("売上"+ errorMes[2]);
 					return;
 				}
 			}
@@ -134,35 +133,38 @@ static AtypeReadfile readMethod = new AtypeReadfile();
 				BufferedReader salesInfo = new BufferedReader(salesBranchCheck);
 				while((temporaryDStr[whileCnt] = salesInfo.readLine()) != null){
 					if (whileCnt ==3 ) {
-						System.out.println(salesDefine+""+errorMes[4]);
+						System.out.println(salesDefine+ ""+ errorMes[3]);
 						return;
 					}
 					whileCnt++;
 				}
-						if (branchList.get(temporaryDStr[0]) == null){
-							System.out.println( salesDefine+"の支店"+errorMes[5]);
-							salesInfo.close(); return;
-
-						}
-						if (commodityList.get(temporaryDStr[1]) == null) {
-							System.out.println( salesDefine+"の商品"+errorMes[5]);
-							salesInfo.close(); return;
-						}
-						if (temporaryDStr[2].matches("^[0-9]{10,}") ){
-							System.out.println(errorMes[6]);
-							salesInfo.close();return;
-						}
-						if (temporaryDStr[2].matches("[0-9]{0,9}") == false ){
-							System.out.println(errorMes[4]);
-							salesInfo.close();return;
-						}
-						branchList.put( temporaryDStr[0] , new allData(branchList.get(temporaryDStr[0]).name , branchList.get(temporaryDStr[0]).sales + Integer.parseInt(temporaryDStr[2])));
-						commodityList.put( temporaryDStr[1] , new allData( commodityList.get(temporaryDStr[1]).name , commodityList.get(temporaryDStr[1]).sales + Integer.parseInt(temporaryDStr[2])));
-						if (branchList.get(temporaryDStr[0]).sales > 999999999 || commodityList.get(temporaryDStr[1]).sales > 999999999){
-							System.out.println(errorMes[6]);
-							salesInfo.close();return;
-						}
-				if (i+1 == salesFilesSort.size() ){
+				if (branchList.get(temporaryDStr[0]) == null){
+					System.out.println( salesDefine+ "の支店"+ errorMes[4]);
+					salesInfo.close(); return;
+				}
+				if (commodityList.get(temporaryDStr[1]) == null) {
+					System.out.println( salesDefine+ "の商品"+ errorMes[4]);
+					salesInfo.close(); return;
+				}
+				if (temporaryDStr[2].matches("^[0-9]{10,}") ){
+					System.out.println(errorMes[5]);
+					salesInfo.close();return;
+				}
+				if (temporaryDStr[2].matches("[0-9]{0,9}") == false ){
+					System.out.println(errorMes[3]);
+					salesInfo.close();return;
+				}
+				branchList.put( temporaryDStr[0] , new allData(branchList.get(temporaryDStr[0]).name ,
+						branchList.get(temporaryDStr[0]).sales + Integer.parseInt(temporaryDStr[2])));
+				commodityList.put( temporaryDStr[1] , new allData( commodityList.get(temporaryDStr[1]).name ,
+						commodityList.get(temporaryDStr[1]).sales + Integer.parseInt(temporaryDStr[2])));
+				if (branchList.get(temporaryDStr[0]).sales > 999999999
+						|| commodityList.get(temporaryDStr[1]).sales > 999999999){
+					System.out.println(errorMes[5]);
+					salesInfo.close();
+					return;
+				}
+				if (i+ 1 == salesFilesSort.size() ){
 					salesInfo.close();
 				}
 			} catch (IOException e) {
@@ -175,8 +177,8 @@ static AtypeReadfile readMethod = new AtypeReadfile();
 	     * branch.out に出力
 	     * commodity.out に出力
 	     */
-		readMethod.outputFile(args[0]+"\\branch.out",branchList);
-		readMethod.outputFile(args[0]+"\\commodity.out",commodityList);
+		readMethod.outputFile(args[0]+ File.separator+ "branch.out",branchList);
+		readMethod.outputFile(args[0]+ File.separator+ "\\commodity.out",commodityList);
 		return;
 	}
 }
