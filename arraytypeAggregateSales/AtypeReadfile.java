@@ -23,72 +23,71 @@ public class AtypeReadfile {
 			"合計金額が10桁を超えました。"};
 	static AtypeReadfile readMethod = new AtypeReadfile();
 
-	private HashMap<String,allData> readData(String readfile , String identification , Integer elements){
-		HashMap<String,allData> readList = new HashMap<String,allData>();
+	private HashMap<String, allData> readData(String readfile, String identification, Integer elements) {
+		HashMap<String, allData> readList = new HashMap<String, allData>();
 		File readDefine = new File(readfile);
 		if(!readDefine.exists()){
 			errorMode = 1;
 			return null;
 		}
-		try {
-			FileReader readReader = new FileReader(readDefine);
-			BufferedReader readStocker = new BufferedReader(readReader);
+		try (BufferedReader readStocker = new BufferedReader(new FileReader(readDefine))){
 			while((temporaryStr = readStocker.readLine())  != null) {
 				String[] contType = temporaryStr.split("\\,");
 				if (contType.length != elements || (contType[0].matches(identification)) == false ) {
 					errorMode = 2;
-					readStocker.close();
 					return null;
 				}
-				readList.put(contType[0], new allData(contType[1],0));
+				readList.put(contType[0], new allData(contType[1], 0));
 			}
-			readStocker.close();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} finally {
 		}
 		return readList;
 	}
 
-	private void outputFile(String fileName , HashMap<String, allData> outputData){
-		List<Map.Entry<String, allData>> Entries = new ArrayList<Map.Entry<String, allData>>(outputData.entrySet());
+	private void outputFile(String fileName, HashMap<String, allData> outputData){
+		List<Map.Entry<String, allData>> Entries= new ArrayList<Map.Entry<String, allData>>(outputData.entrySet());
 		Collections.sort(Entries, new Comparator<Map.Entry<String, allData>>() {
-			public int compare(Entry<String,allData> entry1, Entry<String, allData> entry2) {
+			public int compare(Entry<String, allData> entry1, Entry<String, allData> entry2) {
 				return ((Long)entry2.getValue().sales).compareTo((Long)entry1.getValue().sales);
             }
         });
-		File outputRank = new File(fileName);
-		try {
-			FileWriter OutputStock = new FileWriter(outputRank);
-			BufferedWriter RankOutput = new BufferedWriter(OutputStock);
+		try (BufferedWriter RankOutput = new BufferedWriter(new FileWriter(new File(fileName)))) {
 			for (Entry<String, allData> s : Entries){
-				RankOutput.write(s.getKey() + "," + outputData.get(s.getKey()).name +
-						"," + outputData.get(s.getKey()).sales+System.getProperty("line.separator"));
+				RankOutput.write(s.getKey()+ ","+ outputData.get(s.getKey()).name+
+						","+ outputData.get(s.getKey()).sales+ System.getProperty("line.separator"));
 			}
-		RankOutput.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
 
-	public static void main(String[] args){
+	public static void main(String[] args) {
+		if (args[0].trim() == "") {
+			System.out.println("ディレクトリが設定されていません。");
+			return;
+		}
+		if (!new File(args[0]).exists()){
+			System.out.println("ディレクトリが存在しません。");
+			return;
+		}
 		/*
-		 * 支店定義ファイルの呼び出し
+		 *支店定義ファイルの呼び出し
 		 */
 		HashMap<String, allData> branchList = new HashMap<String, allData>();
-		branchList = readMethod.readData(args[0] + File.separator+"branch.lst", "^[0-9]{3}$" ,2);
-		if (errorMode > 0) {
-			System.out.println("支店定義" + errorMes[errorMode-1 ]);
+		branchList = readMethod.readData(args[0]+ File.separator+ "branch.lst", "^[0-9]{3}$", 2);
+		if(errorMode > 0){
+			System.out.println("支店定義"+ errorMes[errorMode-1]);
 			return;
 		}
 		/*
 		 * 商品ファイルの呼び出し
 		 */
 		HashMap<String, allData> commodityList = new HashMap<String, allData>();
-		commodityList = readMethod.readData(args[0] + File.separator+"commodity.lst", "^SFT[0-9]{5}$" , 2);
+		commodityList = readMethod.readData(args[0] + File.separator+ "commodity.lst", "^[a-zA-Z0-9]{8}$", 2);
 		if (errorMode > 0) {
-			System.out.println("商品定義" + errorMes[errorMode-1]);
+			System.out.println("商品定義"+ errorMes[errorMode -1]);
 			return;
 		}
 		/*
@@ -98,7 +97,8 @@ public class AtypeReadfile {
 		String[] salesDirList = salesDir.list();
 		ArrayList<String> salesFilesSort = new ArrayList<String>();
 		for (int i = 0; i < salesDirList.length; i++){
-			if (salesDirList[i].matches("[0-9]{8}(\\.rcd)$")){
+			if (salesDirList[i].matches("[0-9]{8}(\\.rcd)$")
+					&& new File(args[0]+ File.separator+ salesDirList[i]).isFile()){
 				salesFilesSort.add(salesDirList[i]);
 			}
 		}
@@ -111,7 +111,8 @@ public class AtypeReadfile {
 		 * 支店別集計
 		 */
 		int nowNo = 0;
-		String [] temporaryDStr = new String[4];
+		String[] temporaryDStr = new String[4];
+		BufferedReader salesInfo = null;
 		for (int i = 0; i < salesFilesSort.size(); i++){
 			String checkNo = salesFilesSort.get(i);
 			String[] fileSortNoCheck = checkNo.split("\\.");
@@ -128,48 +129,52 @@ public class AtypeReadfile {
 			}
 			try {
 				int whileCnt = 0;
-				File salesDefine = new File(args[0]+"\\"+salesFilesSort.get(i));
+				File salesDefine = new File(args[0]+ File.separator+ salesFilesSort.get(i));
 				FileReader salesBranchCheck = new FileReader(salesDefine);
-				BufferedReader salesInfo = new BufferedReader(salesBranchCheck);
-				while((temporaryDStr[whileCnt] = salesInfo.readLine()) != null){
-					if (whileCnt ==3 ) {
-						System.out.println(salesDefine+ ""+ errorMes[3]);
-						return;
-					}
+				salesInfo = new BufferedReader(salesBranchCheck);
+				while((temporaryDStr[whileCnt] = salesInfo.readLine()) != null && whileCnt < 4){
 					whileCnt++;
 				}
-				if (branchList.get(temporaryDStr[0]) == null){
-					System.out.println( salesDefine+ "の支店"+ errorMes[4]);
-					salesInfo.close(); return;
-				}
-				if (commodityList.get(temporaryDStr[1]) == null) {
-					System.out.println( salesDefine+ "の商品"+ errorMes[4]);
-					salesInfo.close(); return;
-				}
-				if (temporaryDStr[2].matches("^[0-9]{10,}") ){
-					System.out.println(errorMes[5]);
-					salesInfo.close();return;
-				}
-				if (temporaryDStr[2].matches("[0-9]{0,9}") == false ){
-					System.out.println(errorMes[3]);
-					salesInfo.close();return;
-				}
-				branchList.put( temporaryDStr[0] , new allData(branchList.get(temporaryDStr[0]).name ,
-						branchList.get(temporaryDStr[0]).sales + Integer.parseInt(temporaryDStr[2])));
-				commodityList.put( temporaryDStr[1] , new allData( commodityList.get(temporaryDStr[1]).name ,
-						commodityList.get(temporaryDStr[1]).sales + Integer.parseInt(temporaryDStr[2])));
-				if (branchList.get(temporaryDStr[0]).sales > 999999999
-						|| commodityList.get(temporaryDStr[1]).sales > 999999999){
-					System.out.println(errorMes[5]);
-					salesInfo.close();
+				if (whileCnt != 3 ) {
+					System.out.println(salesDefine+ ""+ errorMes[3]);
 					return;
 				}
-				if (i+ 1 == salesFilesSort.size() ){
-					salesInfo.close();
+				if (! branchList.containsKey(temporaryDStr[0])){
+					System.out.println(salesDefine+ "の支店"+ errorMes[4]);
+					return;
 				}
-			} catch (IOException e) {
+				if (! commodityList.containsKey(temporaryDStr[1])) {
+					System.out.println(salesDefine+ "の商品"+ errorMes[4]);
+					return;
+				}
+				if (temporaryDStr[2].matches("^[0-9]{10,}")){
+					System.out.println(errorMes[5]);
+					return;
+				}
+				if (! temporaryDStr[2].matches("[0-9]{0,9}")){
+					System.out.println(errorMes[3]);
+					return;
+				}
+				branchList.put(temporaryDStr[0], new allData(branchList.get(temporaryDStr[0]).name,
+						branchList.get(temporaryDStr[0]).sales+ Integer.parseInt(temporaryDStr[2])));
+				commodityList.put(temporaryDStr[1], new allData(commodityList.get(temporaryDStr[1]).name,
+						commodityList.get(temporaryDStr[1]).sales+ Integer.parseInt(temporaryDStr[2])));
+				if(branchList.get(temporaryDStr[0]).sales > 999999999
+						|| commodityList.get(temporaryDStr[1]).sales > 999999999){
+					System.out.println(errorMes[5]);
+					return;
+				}
+			} catch(IOException e) {
 				System.out.println(e);
 				e.printStackTrace();
+			} finally {
+				if (i+ 1 == salesFilesSort.size() || errorMode > 0 ){
+					try {
+						salesInfo.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
 			}
 		}
 		/*
@@ -177,8 +182,8 @@ public class AtypeReadfile {
 	     * branch.out に出力
 	     * commodity.out に出力
 	     */
-		readMethod.outputFile(args[0]+ File.separator+ "branch.out",branchList);
-		readMethod.outputFile(args[0]+ File.separator+ "\\commodity.out",commodityList);
+		readMethod.outputFile(args[0]+ File.separator+ "branch.out", branchList);
+		readMethod.outputFile(args[0]+ File.separator+ "commodity.out", commodityList);
 		return;
 	}
 }
