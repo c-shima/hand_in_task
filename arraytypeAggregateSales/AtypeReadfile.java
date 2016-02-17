@@ -32,8 +32,8 @@ public class AtypeReadfile {
 		}
 		try (BufferedReader readStocker = new BufferedReader(new FileReader(readDefine))){
 			while((temporaryStr = readStocker.readLine())  != null) {
-				String[] contType = temporaryStr.split("\\,");
-				if (contType.length != elements || (contType[0].matches(identification)) == false ) {
+				String[] contType = temporaryStr.split("\\,",-1);
+				if (contType.length != elements || !(contType[0].matches(identification)) ) {
 					errorMode = 2;
 					return null;
 				}
@@ -41,6 +41,9 @@ public class AtypeReadfile {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (IndexOutOfBoundsException e) {
+			errorMode = 2;
+			return null;
 		}
 		return readList;
 	}
@@ -62,14 +65,14 @@ public class AtypeReadfile {
 		}
 	}
 
-
 	public static void main(String[] args) {
-		if (args[0].trim() == "") {
-			System.out.println("ディレクトリが設定されていません。");
-			return;
-		}
-		if (!new File(args[0]).exists()){
-			System.out.println("ディレクトリが存在しません。");
+		try {
+			if (!new File(args[0]).exists() ||  !new File(args[0]).isDirectory()){
+				System.out.println("指定されたディレクトリが存在しません。");
+				return;
+			}
+		} catch (IndexOutOfBoundsException e){
+			System.out.println("ディレクトリが正しく設定されていません。");
 			return;
 		}
 		/*
@@ -102,17 +105,12 @@ public class AtypeReadfile {
 				salesFilesSort.add(salesDirList[i]);
 			}
 		}
-		if (salesFilesSort.size() == 0) {
-			System.out.println("売上"+ errorMes[0]);
-			return;
-		}
 		Collections.sort(salesFilesSort);
 		/*
 		 * 支店別集計
 		 */
 		int nowNo = 0;
-		String[] temporaryDStr = new String[4];
-		BufferedReader salesInfo = null;
+		String[] temporaryDStr = new String[5];
 		for (int i = 0; i < salesFilesSort.size(); i++){
 			String checkNo = salesFilesSort.get(i);
 			String[] fileSortNoCheck = checkNo.split("\\.");
@@ -127,12 +125,10 @@ public class AtypeReadfile {
 					return;
 				}
 			}
-			try {
+			File salesDefine = new File(args[0]+ File.separator+ salesFilesSort.get(i));
+			try (BufferedReader salesInfo = new BufferedReader( new FileReader( salesDefine));){
 				int whileCnt = 0;
-				File salesDefine = new File(args[0]+ File.separator+ salesFilesSort.get(i));
-				FileReader salesBranchCheck = new FileReader(salesDefine);
-				salesInfo = new BufferedReader(salesBranchCheck);
-				while((temporaryDStr[whileCnt] = salesInfo.readLine()) != null && whileCnt < 4){
+				while(( temporaryDStr[whileCnt] = salesInfo.readLine()) != null && whileCnt < 4){
 					whileCnt++;
 				}
 				if (whileCnt != 3 ) {
@@ -140,41 +136,33 @@ public class AtypeReadfile {
 					return;
 				}
 				if (! branchList.containsKey(temporaryDStr[0])){
-					System.out.println(salesDefine+ "の支店"+ errorMes[4]);
+					System.out.println( salesDefine+ "の支店"+ errorMes[4]);
 					return;
 				}
 				if (! commodityList.containsKey(temporaryDStr[1])) {
-					System.out.println(salesDefine+ "の商品"+ errorMes[4]);
+					System.out.println( salesDefine+ "の商品"+ errorMes[4]);
 					return;
 				}
-				if (temporaryDStr[2].matches("^[0-9]{10,}")){
+				if (temporaryDStr[2].matches("^[0-9]{11,}") || temporaryDStr[2].matches("^\\-[0-9]{11,}") ){
 					System.out.println(errorMes[5]);
 					return;
 				}
-				if (! temporaryDStr[2].matches("[0-9]{0,9}")){
-					System.out.println(errorMes[3]);
+				if (! temporaryDStr[2].matches("[0-9]{0,10}") && ! temporaryDStr[2].matches("^\\-[0-9]{0,10}")){
+					System.out.println(salesDefine+ ""+ errorMes[3]);
 					return;
 				}
 				branchList.put(temporaryDStr[0], new allData(branchList.get(temporaryDStr[0]).name,
-						branchList.get(temporaryDStr[0]).sales+ Integer.parseInt(temporaryDStr[2])));
+						branchList.get(temporaryDStr[0]).sales+ Long.valueOf(temporaryDStr[2])));
 				commodityList.put(temporaryDStr[1], new allData(commodityList.get(temporaryDStr[1]).name,
-						commodityList.get(temporaryDStr[1]).sales+ Integer.parseInt(temporaryDStr[2])));
-				if(branchList.get(temporaryDStr[0]).sales > 999999999
-						|| commodityList.get(temporaryDStr[1]).sales > 999999999){
+						commodityList.get(temporaryDStr[1]).sales+ Long.valueOf(temporaryDStr[2])));
+				if(Long.toString(branchList.get(temporaryDStr[0]).sales).length() > 10
+						|| Long.toString(commodityList.get(temporaryDStr[1]).sales).length() > 10){
 					System.out.println(errorMes[5]);
 					return;
 				}
 			} catch(IOException e) {
 				System.out.println(e);
 				e.printStackTrace();
-			} finally {
-				if (i+ 1 == salesFilesSort.size() || errorMode > 0 ){
-					try {
-						salesInfo.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
 			}
 		}
 		/*
